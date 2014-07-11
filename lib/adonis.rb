@@ -26,6 +26,16 @@ module ADONIS
 
     #初始化数据库
     ::ActiveRecord::Base.establish_connection(@@config[:database])
+
+    @auto_exploit = false
+
+    def self.auto_exploit
+        @auto_exploit
+    end
+
+    def self.set_auto_exploit v
+        @auto_exploit = v
+    end
 end
 
 
@@ -48,6 +58,7 @@ require 'adonis/common/log.rb'
 require 'adonis/exploit/base.rb'
 require 'adonis/exploit/exploit.rb'
 require 'adonis/exploit/hydra.rb'
+require 'adonis/exploit/brute_fource_base.rb'
 
 
 # 加载expliot module

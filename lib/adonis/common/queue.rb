@@ -16,6 +16,15 @@ class Queue
         @@redis.lpop queue_name
     end
 
+    def self.set key_name, v
+        v = v.is_a?(String) ? v : v.to_json
+        @@redis.set key_name, v
+    end
+
+    def self.get key_name
+        @@redis.get key_name
+    end
+
 end
 
 end

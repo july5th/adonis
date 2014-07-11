@@ -8,6 +8,7 @@ class Import
 
     def self.import
         i = 0
+        exploit_list = []
         port_str = ::ADONIS::COMMON::Queue.lpop "adonis_scan_queue"
         while port_str != nil
             i = i + 1
@@ -15,7 +16,10 @@ class Import
             if port_list.size == 3 && (port_list[1] == "tcp" or port_list[1] == "udp") && (port_list[2] == port_list[2].to_i.to_s)
                 logger.info("ADONIS::SCAN::Import.run, #{port_str}")
                 host = ::ADONIS::MODEL::Host.add(port_list[0], ["#{port_list[1]}_#{port_list[2]}"])
-                ::ADONIS::EXPLOIT::Exploit.add_target host
+                if ::ADONIS.auto_exploit and not exploit_list.include?(host.id)
+                    ::ADONIS::EXPLOIT::Exploit.add_target host
+                    exploit_list.push host.id
+                end
             else
                 logger.error("ADONIS::SCAN::Import.run, #{port_str}")
             end

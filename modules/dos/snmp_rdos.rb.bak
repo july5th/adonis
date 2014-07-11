@@ -2,15 +2,14 @@
 
 module ADONIS
 module MODULE
-module EXPLOIT
 
-class Ntp_rdos < ::ADONIS::EXPLOIT::Base
+class Snmp_rdos < ::ADONIS::EXPLOIT::Base
 
     def init
-        module_id = "1001"
-        module_name = "ntp_rdos"
-        module_desc = "NTP反射式拒绝服务攻击"
-        port_str = "udp_123"
+        module_id = "1002"
+        module_name = "snmp_rdos"
+        module_desc = "SNMP反射式拒绝服务攻击"
+        port_str = "udp_161"
         update_info(module_id, module_name, module_desc, port_str, false)
         return self
     end
@@ -25,7 +24,6 @@ class Ntp_rdos < ::ADONIS::EXPLOIT::Base
 
 end
 
-end
 end
 end
 

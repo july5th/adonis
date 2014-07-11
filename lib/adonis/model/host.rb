@@ -82,6 +82,28 @@ class Host < ActiveRecord::Base
     def can_exploit_by(id)
         self.exploit_module_list.include?(id) ? true : false
     end
+
+    def self.get_hosts host_str, limit = nil
+        search_list = {}
+        like_str = nil
+        host_str.each do |ps|
+            return self.all if ps == "all"
+            if self.new.respond_to?(ps.to_sym)
+                search_list.update({ps.to_sym => true})
+            else
+                if ps =~ /^[\d|.|%]*$/
+                    like_str = ps
+                end
+            end
+        end
+
+        where_str = "where(search_list)"
+        where_str += ".where(\"ip like '#{like_str}'\")" if not like_str.nil?
+        where_str += ".limit(limit)" if not limit.nil?
+
+        targets = self.class_eval where_str
+        return targets
+    end
 end
 
 end

@@ -47,7 +47,7 @@ class Show
         )
 
         exms.each do |exm|
-            module_class = ::ADONIS::EXPLOIT::Exploit.exploit_module_hash[exm.module_id.to_s]
+            module_class = ::ADONIS::EXPLOIT::Exploit.exploit_module_hash[exm.module_id]
             pa = exm.pa ? exm.pa : "--"
             pb = exm.pb ? exm.pb : "--"
             pc = exm.pc ? exm.pc : "--"
@@ -64,59 +64,32 @@ class Show
         show_target get_target_by_port(port_str, limit)
     end
 
-    def self.show_exms_by_port port_str, limit = nil
-        target = get_target_by_port(port_str, limit)
+    def self.show_exms_by_host hosts
         exms = []
-        target.each do |t|
+        hosts.each do |t|
             t.exms.each do |e|
                 exms << e
             end
         end
 
         show_exm exms
-    end
-
-    def self.get_target_by_port port_str, limit = nil
-        search_list = {}
-        like_str = nil
-        port_str.each do |ps|
-            if ::ADONIS::MODEL::Host.new.respond_to?(ps.to_sym)
-                search_list.update({ps.to_sym => true})
-            else
-                if ps =~ /^[\d|.|%]*$/
-                    like_str = ps
-                end
-            end
-        end
-
-        where_str = "where(search_list)"
-        where_str += ".where(\"ip like '#{like_str}'\")" if not like_str.nil?
-        where_str += ".limit(limit)" if not limit.nil?
-
-        target = ::ADONIS::MODEL::Host.class_eval where_str
-        return target
-    end
-
-    def self.show_all_target
-        show_target ::ADONIS::MODEL::Host.all
-    end
-
-    def self.show_all_exms
-        show_exm ::ADONIS::MODEL::Exm.all
+        return exms.size
     end
 
     #显示exploit插件
     def self.show_exploit_module
-        columns = ["ID", "种类", "名称", "端口", "描述"]
+        columns = ["ID", "Family", "Name", "Port", "Status", "DESC"]
         show_table = Rex::Ui::Text::Table.new(
             'Header' => "EXPLOIT模块",
             'Ident' => 1,
             'Columns' => columns,
         )
 
+        active_module_list = ::ADONIS::EXPLOIT::Exploit.get_exploit_module_list
+        
         ::ADONIS::EXPLOIT::Exploit.exploit_module_spec_hash.each_pair do |kind, module_hash|
             module_hash.each_pair do |k, v|
-                show_table.add_row [k, kind.to_s, v.name, v.port, v.desc]
+                show_table.add_row [k, kind.to_s, v.name, v.port_str, active_module_list.include?(v.id) ? "active" : "--", v.desc]
             end
         end
 
