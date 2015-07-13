@@ -3,23 +3,27 @@
 :port:
   [
     #tcp_21,
-    tcp_22,
-    tcp_23,
+    #tcp_22,
+    #tcp_23,
     #udp_53,
-    #tcp_80,
+    tcp_80,
     #tcp_111,
     #udp_123,
     #udp_161,
+    #tcp_135,
+    #udp_137,
+    #tcp_139,
     #tcp_443,
     #tcp_445,
     #udp_636,
     #udp_1194,
-    tcp_1433,
+    #tcp_1433,
     #tcp_3306,
-    tcp_3389,
-    tcp_5900,
-    #tcp_8080,
+    #tcp_3389,
+    #tcp_5900,
+    tcp_8080,
     #tcp_49152,
+    #udp_53413,
   ]
 
 :redis:
@@ -30,9 +34,9 @@
 :database:
     :adapter: mysql2
     :encoding: utf8
-    :database: an
+    :database: adonis
     :pool: 5
     :username: root
-    :password:
+    :password: 111111
     :host: localhost
 

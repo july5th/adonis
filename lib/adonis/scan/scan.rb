@@ -6,9 +6,15 @@ module ADONIS
 module SCAN
 
 class Scan
-    def self.run target
+    def self.run target, tag = nil
         cmd = File.join(::ADONIS::BinDir, "masscan")
         port_list = []
+	target_host_list = []
+
+	(Rex::Socket::RangeWalker.new target).each do |ip|
+		target_host_list.push ip
+	end
+
         ::ADONIS::MODEL::Host.port_key_list.each do |port|
             lport = port.split("_")
             if lport[0] == "tcp"
@@ -20,17 +26,19 @@ class Scan
 
         #args = "-p#{port_list.join(',')} --rate 30 -oR 127.0.0.1"
         args = "-p#{port_list.join(',')} -oR 127.0.0.1"
-        command = "#{cmd} #{args} #{target}"
+        command = "sudo #{cmd} #{args} #{target}"
 
         print "启动导入进程\n"
-        thread = Thread.new {::ADONIS::SCAN::Import.run}
+
+	import = ::ADONIS::SCAN::Import.new
+        thread = Thread.new {import.run}
 
         print "执行扫描命令: #{command}\n"
         `#{command}`
 
-        print "请等待10秒\n"
-        sleep 10
-        thread.kill
+        print "请等待导入进程结束\n"
+	import.clear target_host_list, tag
+        thread.join
         print "扫描结束\n"
 
     end

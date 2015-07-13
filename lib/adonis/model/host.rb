@@ -13,7 +13,7 @@ class Host < ActiveRecord::Base
 
 
     # Host.add(127.1.1.1, [tcp_80, udp_8080])
-    def self.add(ip, port_list)
+    def self.add(ip, port_list, timestamp = nil)
         host = ::ADONIS::MODEL::Host.where(:ip => ip)
         if host.size != 0
             host = host.first
@@ -22,9 +22,11 @@ class Host < ActiveRecord::Base
             host.ip = ip
         end
 
+        timestamp = Time.now.to_i if timestamp == nil 
+
         port_list.each do |port_str|
             if port_key_list.include?(port_str)
-                host.instance_eval "self.#{port_str} = true"
+                host.instance_eval "self.#{port_str} = #{timestamp}"
             else
                 host.add_uncommon_port(port_str)
             end
@@ -86,23 +88,36 @@ class Host < ActiveRecord::Base
     def self.get_hosts host_str, limit = nil
         search_list = {}
         like_str = nil
+        tag_str = nil
         host_str.each do |ps|
             return self.all if ps == "all"
             if self.new.respond_to?(ps.to_sym)
-                search_list.update({ps.to_sym => true})
+                search_list.update({ps.to_sym => nil})
             else
                 if ps =~ /^[\d|.|%]*$/
                     like_str = ps
-                end
+                else
+		    tag_str = ps
+		end
             end
         end
 
-        where_str = "where(search_list)"
+        where_str = "where.not(search_list)"
         where_str += ".where(\"ip like '#{like_str}'\")" if not like_str.nil?
+        where_str += ".where(\"tag = '#{tag_str}'\")" if not tag_str.nil?
         where_str += ".limit(limit)" if not limit.nil?
 
         targets = self.class_eval where_str
         return targets
+    end
+
+    def add_tmp_msg msg_name, msg_value
+	@tmp_hash = {} if @tmp_hash.nil?
+	@tmp_hash.update({msg_name => msg_value})
+    end
+
+    def get_tmp_msg msg_name
+	@tmp_hash[msg_name]
     end
 end
 

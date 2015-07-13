@@ -3,20 +3,19 @@
 module ADONIS
 module MINGRATE
 
-class ChangeExms < ActiveRecord::Migration
+class ChangeInfos < ActiveRecord::Migration
   def change
     begin
-      create_table :exms do |t|
+      create_table :infos do |t|
         t.integer :module_id, :null => false
         t.integer :host_id, :null => false
 
-        t.string :p1
-        t.string :p2
-        t.string :p3
-        t.string :p4
-        t.string :p5
+        t.string :url
 
-        t.text :alog
+        t.string :code
+        t.string :server
+        t.string :header
+        t.string :content
 
 	# 是否激活
         t.integer :active_time, :null => true
@@ -26,7 +25,7 @@ class ChangeExms < ActiveRecord::Migration
         t.timestamps
       end
     rescue
-      print "创建exms数据表失败.\n"
+      print "创建info数据表失败.\n"
     end
   end
 end

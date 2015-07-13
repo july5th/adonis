@@ -33,32 +33,36 @@ class OptsConsole
         options['Init'] = true
       end
 
-      opts.on("--console", "--console", "命令行模式") do 
+      opts.on("-c", "--console", "命令行模式") do 
         options['Console'] = true
       end
 
-      opts.on("--import", "--import", "从redis中导入目标") do 
+      opts.on("-i", "--import", "从redis中导入目标") do 
         options['Import'] = true
       end
 
-      opts.on("--scan", "--scan <target>", "从redis中导入目标") do |v|
+      opts.on("--scan", "--scan <target>", "扫描目标") do |v|
         options['Scan'] = v
       end
       
-      opts.on("--host-num", "--host-num", "显示数据库主机数量") do |v|
+      opts.on("-n", "--host-num", "显示数据库主机数量") do |v|
         options['Host_num'] = true
       end
 
-      opts.on("--target", "--target <open-port>", "指定目标主机，可选字段: all,is_vuln,is_control,#{::ADONIS::MODEL::Host.port_key_list.join(",")}") do |v|
+      opts.on("-t", "--target <open-port>", "指定目标主机，可选字段: all,<tag>,is_vuln,is_control,#{::ADONIS::MODEL::Host.port_key_list.join(",")}") do |v|
         options['Target'] = v
       end
 
-      opts.on("--limit", "--limit <num>", "显示数量限制") do |v|
+      opts.on("-l", "--limit <num>", "显示数量限制") do |v|
         options['Limit'] = v
       end
 
-      opts.on("--show", "--show", "显示主机列表") do 
+      opts.on("-s", "--show", "显示主机列表") do 
         options['Show'] = true
+      end
+
+      opts.on("-v", "--verbose", "显示详细信息") do 
+        options['Verbose'] = true
       end
       
       opts.on("--show-exms", "--show-exms", "显示目标的弱点") do 
@@ -69,15 +73,19 @@ class OptsConsole
         options['Show_all_exms'] = true
       end
 
-      opts.on("--exploit", "--exploit", "自动渗透主机") do 
+      opts.on("--tag", "--add-tag <tag>", "为指定目标添加Tag") do |v|
+        options['Tag'] = v
+      end
+
+      opts.on("-e", "--exploit", "自动渗透主机") do 
         options['Exploit'] = true
       end
 
-      opts.on("--start-exploit-pr", "--start-exploit-pr <process number>", "建立渗透测试后台进程") do |v|
+      opts.on("--start", "--start-exploit-pr <process number>", "建立渗透测试后台进程") do |v|
         options['Start_exploit_pr'] = v
       end
 
-      opts.on("--stop-exploit-pr", "--stop-exploit-pr", "停止渗透测试后台进程") do
+      opts.on("--stop", "--stop-exploit-pr", "停止渗透测试后台进程") do
         options['Stop_exploit_pr'] = true
       end
 
@@ -85,20 +93,28 @@ class OptsConsole
         options['Del_exploit_queue'] = true
       end
 
-      opts.on("--list-module", "--list-module", "显示现有的Exploit模块") do
-        options['List_exploit_modules'] = true
+      opts.on("-p", "--print-exploit-tree", "打印有所渗透模块") do
+        options['Print_exploit_tree'] = true
       end
 
-      opts.on("--active-module", "--active-module <module id>", "激活此模块") do |v|
+      opts.on("-a", "--active-module <module id>", "激活此模块") do |v|
         options['Active_module'] = v
       end
 
-      opts.on("--inactive-exploit-module", "--inactive-module <module id>", "取消此模块") do |v|
+      opts.on("--inactive", "--inactive-module <module id>", "取消此模块") do |v|
         options['Inactive_module'] = v
       end
 
-      opts.on("--clean-test", "--clean-test", "删除已测标志") do
+      opts.on("--clean", "--clean-test", "删除已测标志") do
         options['Clean_test'] = true
+      end
+
+      opts.on("-d", "--print-detail", "显示所有有关的信息") do
+        options['Print_detail'] = true
+      end
+
+      opts.on("-q", "--query-host", "显示此IP的主机名称") do
+        options['Query_host'] = true
       end
 
       opts.separator ""
@@ -151,7 +167,7 @@ end
 
 if (options['Exploit'])
     if targets
-        i = ::ADONIS::EXPLOIT::Exploit.exploit targets
+        i = ::ADONIS::EXPLOIT::Exploit.add_exploit_targets targets
         print "\n添加目标完毕,共#{i}个目标.\n"
     elsif (options['Import']) or (options['Scan'])
         ::ADONIS.set_auto_exploit true
@@ -161,13 +177,26 @@ if (options['Exploit'])
 end
 
 if (options['Import'])
-    i = ADONIS::SCAN::Import.import
+    i = ADONIS::SCAN::Import.new.import
     print "共导入#{i}个目标\n"
     exit
 end
 
 if (options['Scan'])
-    ADONIS::SCAN::Scan.run options['Scan']
+    ADONIS::SCAN::Scan.run options['Scan'], options['Tag']
+    exit
+end
+
+if (options['Tag'])
+    if targets
+	targets.each do |v|
+          print "Add tag #{options['Tag']} to #{v.ip} .\n"
+	  v.tag = options['Tag']
+	  v.save
+	end
+    else
+        print "\n请提供target参数, --target.\n"
+    end
     exit
 end
 
@@ -182,7 +211,7 @@ end
 
 if (options['Show'])
     if targets
-        ::ADONIS::COMMON::Show.show_target targets
+        ::ADONIS::COMMON::Show.show_target targets, options['Verbose']
         print "\n显示完毕,共#{targets.size}个目标.\n"
     else
         print "\n请提供target参数, --target.\n"
@@ -192,7 +221,7 @@ end
 
 if (options['Show_exms'])
     if targets
-        i = ::ADONIS::COMMON::Show.show_exms_by_host targets
+        i = ::ADONIS::COMMON::Show.show_exms_by_host targets, options['Verbose']
         print "\n显示完毕,共#{i}个目标.\n"
     else
         print "\n请提供target参数, --target.\n"
@@ -203,13 +232,12 @@ end
 
 if (options['Show_all_exms'])
     i = ::ADONIS::MODEL::Exm.all
-    ::ADONIS::COMMON::Show.show_exm i
+    ::ADONIS::COMMON::Show.show_exm i, options['Verbose']
     print "\n显示完毕,共#{i.size}个目标.\n"
 end
 
-if (options['List_exploit_modules'])
-    i = ADONIS::COMMON::Show.show_exploit_module
-    print "\n显示完毕,共#{i}个入侵插件.\n"
+if (options['Print_exploit_tree'])
+    ADONIS::EXPLOIT::ModuleHelper.print_node_tree options['Verbose']
     exit
 end
 
@@ -224,10 +252,16 @@ if (options['Clean_test'])
     end
 
     tmp_host_list.each do |host|
+	exms = ::ADONIS::MODEL::Exm.where(:host_id => host.id)
         host.tested_exploit_modules = nil
         host.history = nil
         host.save
         p "delete #{host.ip} tested status"
+	exms.each do |e|
+		e.active_time = nil
+		e.save
+        	p "inactive exms #{e.id}"
+	end
     end
 
     exit
@@ -255,11 +289,39 @@ if (options['Del_exploit_queue'])
 end
 
 if (options['Active_module'])
-    module_id_list = ::ADONIS::EXPLOIT::Exploit.get_moduled_list_by_str options['Active_module']
-    ::ADONIS::EXPLOIT::Exploit.active_module module_id_list
+    module_id_list = ::ADONIS::EXPLOIT::ModuleHelper.get_module_list_by_id_str options['Active_module']
+    ::ADONIS::EXPLOIT::ModuleHelper.active_module module_id_list
 end
 
 if (options['Inactive_module'])
-    module_id_list = ::ADONIS::EXPLOIT::Exploit.get_moduled_list_by_str options['Inactive_module']
-    ::ADONIS::EXPLOIT::Exploit.inactive_module module_id_list
+    module_id_list = ::ADONIS::EXPLOIT::ModuleHelper.get_module_list_by_id_str options['Inactive_module']
+    ::ADONIS::EXPLOIT::ModuleHelper.inactive_module module_id_list
+end
+
+if (options['Print_detail'])
+    if targets
+    	::ADONIS::COMMON::Show.print_detail targets
+    else
+        print "\n请提供target参数, --target.\n"
+    end
+    exit
+end
+
+if (options['Query_host'])
+    if targets
+    	targets.each do |t|
+    		tmp = ::ADONIS::COMMON::IpToHost.new t.ip
+		tmp.query
+		if tmp.web_list.size > 0
+			tmp.web_list.each do |w|
+				print "#{t.ip}: #{w}\n"
+			end
+		else
+			print "#{t.ip}: null\n"
+		end
+	end
+    else
+        print "\n请提供target参数, --target.\n"
+    end
+    exit
 end

